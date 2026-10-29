@@ -31,7 +31,7 @@ export default function PortalHome() {
           <GasStatusCard estimate={est} tank={me.tankSize} />
           <div className="mt-5">
             <LevelBar pct={est.pct} status={est.status} />
-            <div className="mt-2 flex justify-between text-xs text-ink-500">
+            <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-ink-500">
               <span>Last delivery: {me.lastDeliveryAt ? formatDate(me.lastDeliveryAt) : "none yet"}</span>
               <span>Usual: one tank per ~{me.avgDaysPerTank ?? 30} days</span>
             </div>
@@ -77,9 +77,9 @@ export default function PortalHome() {
               <ul className="space-y-3">
                 {active.map((r) => (
                   <li key={r._id} className="flex items-start justify-between gap-3 rounded-xl border border-line p-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-ink">{r.type === "refill" ? `Refill · ${r.quantity ?? 1} x ${r.tankSize ?? me.tankSize}` : r.type === "inquiry" ? "Inquiry" : "Request"}</p>
-                      <p className="text-xs text-ink-500">{r.message}</p>
+                      <p className="break-words text-xs text-ink-500">{r.message}</p>
                       {r.scheduledAt && <p className="mt-1 text-xs font-medium text-brand-700">Scheduled: {formatDate(r.scheduledAt, true)}</p>}
                     </div>
                     <RequestStatusBadge status={r.status} />

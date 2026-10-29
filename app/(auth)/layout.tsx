@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import Image from "next/image";
 import { PGI_PHONE, PGI_PHONE_DISPLAY } from "@/lib/gas";
+import { InstallAppButton } from "@/components/pwa/InstallApp";
 
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
@@ -37,9 +38,12 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       <main className="flex flex-1 flex-col bg-surface-2">
         <div className="flex items-center justify-between px-5 py-4 lg:hidden">
           <Logo />
-          <Link href="/" className="text-sm font-medium text-ink-500">
-            Back to home
-          </Link>
+          <div className="flex items-center gap-2">
+            <InstallAppButton compact />
+            <Link href="/" className="text-sm font-medium text-ink-500">
+              Back to home
+            </Link>
+          </div>
         </div>
         <div className="flex flex-1 items-center justify-center px-4 py-8 sm:px-8">
           <div className="w-full max-w-md">{children}</div>

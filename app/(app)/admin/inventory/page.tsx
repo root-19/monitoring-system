@@ -45,7 +45,7 @@ export default function InventoryPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Total sales (all time)" value={data ? peso(data.sales.all.revenue) : "—"} icon={<Banknote className="size-4" />} tone="green" sub={data ? `${data.sales.all.tanks} tanks delivered` : undefined} />
         <StatCard label="Sales this month" value={data ? peso(data.sales.month.revenue) : "—"} icon={<TrendingUp className="size-4" />} tone="blue" sub={data ? `Today: ${peso(data.sales.today.revenue)}` : undefined} />
         {data?.stock.map((s) => (
@@ -76,7 +76,7 @@ export default function InventoryPage() {
                     </p>
                     <p className="text-xs text-ink-500">{s.price != null ? `Price ${peso(s.price)} each` : "Set a price so sales are counted automatically"}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => setModal({ kind: "restock", tank: s.tankSize })}><ArrowDownToLine className="size-4" /> Stock in</Button>
                     <Button size="sm" variant="ghost" onClick={() => setModal({ kind: "adjust", tank: s.tankSize })}><ClipboardCheck className="size-4" /> Count</Button>
                     <Button size="sm" variant="ghost" onClick={() => setModal({ kind: "price", tank: s.tankSize })}><Tag className="size-4" /> Price</Button>

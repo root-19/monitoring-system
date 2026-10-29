@@ -66,6 +66,10 @@ export function ReminderComposer({ clients, preselected = [], onSent }: { client
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (targets.length === 0) return toast("Choose at least one client.", "error");
+    if (!title.trim() || !body.trim()) return toast("Title and message are required.", "error");
+    // Everything in braces except {name}/{tank} is a placeholder the admin still has to replace.
+    const leftover = body.replaceAll("{name}", "").replaceAll("{tank}", "").match(/\{[^}]*\}/);
+    if (leftover) return toast(`Replace ${leftover[0]} with your actual text before sending.`, "error");
     setBusy(true);
     try {
       // Personalise per client ({name}, {tank}) so SMS text is ready to copy.

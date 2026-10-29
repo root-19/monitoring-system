@@ -65,7 +65,7 @@ export function ButtonLink({
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("rounded-2xl border border-line bg-white shadow-card", className)}>{children}</div>;
+  return <div className={cn("min-w-0 max-w-full rounded-2xl border border-line bg-white shadow-card", className)}>{children}</div>;
 }
 
 export function CardHeader({

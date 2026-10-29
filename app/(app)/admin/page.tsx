@@ -35,7 +35,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <PageHeader title="Dashboard" description="What needs your attention today." action={<ButtonLink href="/admin/clients/new" size="sm">+ Add client</ButtonLink>} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
         <StatCard label="Clients" value={summary?.clients.length ?? "—"} icon={<Users className="size-4" />} />
         <StatCard label="Low on gas" value={attention.length} icon={<Flame className="size-4" />} tone={attention.length ? "red" : "green"} sub="Based on last delivery & usage" />
         <StatCard label="Pending requests" value={summary?.pendingRequests ?? "—"} icon={<ClipboardList className="size-4" />} tone="amber" />
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
             ) : (
               <ul className="divide-y divide-line">
                 {attention.map(({ c, est }) => (
-                  <li key={c._id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <li key={c._id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
                       <Link href={`/admin/clients/${c._id}`} className="font-medium text-ink hover:text-brand-600">
                         {c.name}
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
                         {c.tankSize} · last delivery {c.lastDeliveryAt ? formatDate(c.lastDeliveryAt) : "—"} · {c.address}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <GasBadge status={est.status} label={est.label} />
                       <a href={`tel:${c.phone}`} className="grid size-9 place-items-center rounded-lg border border-line text-ink-700 hover:bg-surface-2" title={formatPhone(c.phone)}>
                         <Phone className="size-4" />
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
                 {requests.slice(0, 6).map((r) => (
                   <li key={r._id} className="rounded-xl border border-line p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm font-semibold text-ink">{r.clientName}</p>
                         <p className="text-xs text-ink-700">{r.type === "refill" ? `Refill · ${r.quantity ?? 1} x ${r.tankSize ?? r.clientTank}` : r.type === "inquiry" ? "Inquiry" : "Request"} — {r.message}</p>
                         <p className="text-[11px] text-ink-300">{formatDate(r.createdAt, true)}</p>

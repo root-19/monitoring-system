@@ -2,13 +2,11 @@
 
 import { Component, useMemo, type ReactNode } from "react";
 import { useQuery } from "convex/react";
-import { APIProvider, AdvancedMarker, Map } from "@vis.gl/react-google-maps";
 import { motion } from "motion/react";
 import { MapPin, Navigation, Users } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { PublicConvexProvider } from "@/components/providers/SessionProvider";
 import { ButtonLink } from "@/components/ui";
-import { MAPS_KEY, PH_CENTER } from "@/components/maps/LocationPicker";
 import { PH_BBOX, PH_H, PH_PATH, PH_W } from "./philippines";
 
 type Pin = { lat: number; lng: number; tank: string };
@@ -76,7 +74,7 @@ function CoverageSection({ live }: { live: Pin[] | null | undefined }) {
             <p className="text-sm font-semibold uppercase tracking-wider text-brand-300">Delivery map</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Every customer, pinned on the map.</h2>
             <p className="mt-3 max-w-lg text-white/70">
-              When you sign up, your house is pinned on Google Maps. Our rider sees exactly where to go, and Fiesta Gas PGI can plan the fastest route for the day.
+              When you sign up, your house is pinned on our delivery map. Our rider sees exactly where to go, and Fiesta Gas PGI can plan the fastest route for the day.
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
@@ -86,7 +84,7 @@ function CoverageSection({ live }: { live: Pin[] | null | undefined }) {
         </motion.div>
 
         <motion.div variants={reveal} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-60px" }} className="relative mt-10 overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl">
-          {MAPS_KEY ? <LiveMap pins={pins} /> : <IllustratedMap pins={pins} />}
+          <IllustratedMap pins={pins} />
           <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 rounded-full bg-ink/80 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">
             <span className="relative flex size-2">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-400 opacity-75" />
@@ -117,47 +115,26 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; la
   );
 }
 
-function LiveMap({ pins }: { pins: Pin[] }) {
-  const center = useMemo(() => {
-    const lat = pins.reduce((s, p) => s + p.lat, 0) / pins.length;
-    const lng = pins.reduce((s, p) => s + p.lng, 0) / pins.length;
-    return Number.isFinite(lat) ? { lat, lng } : PH_CENTER;
-  }, [pins]);
-  return (
-    <div className="h-[460px] w-full">
-      <APIProvider apiKey={MAPS_KEY}>
-        <Map defaultCenter={center} defaultZoom={13} mapId="PGI_COVERAGE" gestureHandling="cooperative" disableDefaultUI zoomControl style={{ width: "100%", height: "100%" }}>
-          {pins.map((p, i) => (
-            <AdvancedMarker key={i} position={{ lat: p.lat, lng: p.lng }}>
-              <PinDot delay={i * 0.08} />
-            </AdvancedMarker>
-          ))}
-        </Map>
-      </APIProvider>
-    </div>
-  );
-}
-
-function PinDot({ delay = 0 }: { delay?: number }) {
-  return (
-    <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay, type: "spring", stiffness: 300, damping: 18 }} className="relative block size-5">
-      <span className="absolute inset-0 animate-pulse-ring rounded-full bg-brand-500/60" />
-      <span className="absolute inset-1 rounded-full bg-brand-600 ring-2 ring-white shadow-soft" />
-    </motion.span>
-  );
-}
-
-/** Keyless fallback: a 2D Philippines map (slight 3D tilt) with pins placed by their real coordinates. */
+/** 2D Philippines map (slight 3D tilt) with customer pins placed by their real coordinates. */
 function IllustratedMap({ pins }: { pins: Pin[] }) {
-  const placed = useMemo(
-    () =>
-      pins.map((p) => ({
-        x: ((p.lng - PH_BBOX.minLng) / (PH_BBOX.maxLng - PH_BBOX.minLng)) * PH_W,
-        y: ((PH_BBOX.maxLat - p.lat) / (PH_BBOX.maxLat - PH_BBOX.minLat)) * PH_H,
-        tank: p.tank,
-      })),
-    [pins],
-  );
+  // Project to map space, then merge pins that would overlap into one bubble with a count.
+  const clusters = useMemo(() => {
+    const placed = pins.map((p) => ({
+      x: ((p.lng - PH_BBOX.minLng) / (PH_BBOX.maxLng - PH_BBOX.minLng)) * PH_W,
+      y: ((PH_BBOX.maxLat - p.lat) / (PH_BBOX.maxLat - PH_BBOX.minLat)) * PH_H,
+    }));
+    const RADIUS = 60; // map units; a pin this close to a bubble joins it
+    const groups: { x: number; y: number; n: number }[] = [];
+    for (const p of placed) {
+      const g = groups.find((c) => Math.hypot(c.x - p.x, c.y - p.y) < RADIUS);
+      if (g) {
+        g.x = (g.x * g.n + p.x) / (g.n + 1);
+        g.y = (g.y * g.n + p.y) / (g.n + 1);
+        g.n += 1;
+      } else groups.push({ x: p.x, y: p.y, n: 1 });
+    }
+    return groups;
+  }, [pins]);
 
   return (
     <div className="relative h-[460px] w-full overflow-hidden bg-[#0f1a33] [perspective:1400px] sm:h-[560px]">
@@ -191,13 +168,13 @@ function IllustratedMap({ pins }: { pins: Pin[] }) {
         <path d={PH_PATH} fill="url(#land)" stroke="#5f8dff" strokeWidth={2.5} strokeLinejoin="round" filter="url(#landShadow)" />
 
         {/* delivery route between pins */}
-        {placed.length > 1 && (
+        {clusters.length > 1 && (
           <motion.path
-            d={placed.map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" ")}
+            d={clusters.map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" ")}
             stroke="#4a85ff"
-            strokeWidth={4}
+            strokeWidth={8}
             fill="none"
-            strokeDasharray="10 12"
+            strokeDasharray="20 24"
             initial={{ pathLength: 0, opacity: 0 }}
             whileInView={{ pathLength: 1, opacity: 0.85 }}
             viewport={{ once: true }}
@@ -205,23 +182,29 @@ function IllustratedMap({ pins }: { pins: Pin[] }) {
           />
         )}
 
-        {placed.map((p, i) => (
+        {clusters.map((c, i) => (
           <motion.g
             key={i}
             initial={{ opacity: 0, scale: 0.4 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.4 + i * 0.1, type: "spring", stiffness: 260, damping: 16 }}
-            style={{ transformOrigin: `${p.x}px ${p.y}px` }}
+            style={{ transformOrigin: `${c.x}px ${c.y}px` }}
           >
-            <circle cx={p.x} cy={p.y} r={26} fill="#4a85ff" opacity={0.25}>
-              <animate attributeName="r" values="18;40;18" dur="2.4s" repeatCount="indefinite" />
+            <circle cx={c.x} cy={c.y} r={c.n > 1 ? 80 : 50} fill="#4a85ff" opacity={0.25}>
+              <animate attributeName="r" values={c.n > 1 ? "60;120;60" : "36;80;36"} dur="2.4s" repeatCount="indefinite" />
               <animate attributeName="opacity" values="0.35;0;0.35" dur="2.4s" repeatCount="indefinite" />
             </circle>
-            <circle cx={p.x} cy={p.y} r={14} fill="#0b5fff" stroke="#fff" strokeWidth={4} />
-            <text x={p.x + 18} y={p.y - 14} fill="#fff" fontSize="26" fontWeight="700" style={{ paintOrder: "stroke" }} stroke="#0f1a33" strokeWidth={6}>
-              {p.tank === "2.7kg" ? "2.7" : "11"}
-            </text>
+            {c.n > 1 ? (
+              <>
+                <circle cx={c.x} cy={c.y} r={58} fill="#0b5fff" stroke="#fff" strokeWidth={8} />
+                <text x={c.x} y={c.y + 20} textAnchor="middle" fill="#fff" fontSize="56" fontWeight="800">
+                  {c.n}
+                </text>
+              </>
+            ) : (
+              <circle cx={c.x} cy={c.y} r={28} fill="#0b5fff" stroke="#fff" strokeWidth={8} />
+            )}
           </motion.g>
         ))}
       </motion.svg>
