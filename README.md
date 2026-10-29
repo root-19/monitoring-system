@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fiesta Gas PGI — LPG Monitoring & Delivery System
 
-## Getting Started
+Next.js 16 (App Router, backend inside Next.js via Server Actions) + Convex (database and functions).
 
-First, run the development server:
+## What it does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**Public landing page** — animated hero, features, delivery map with customer pins, how it works, contact (0998 586 1976).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Client portal** (`/portal`) — log in with mobile number; see estimated gas left (11 kg / 2.7 kg tank); request a refill or send an inquiry; chat with PGI; receive notifications; edit address and pin the house on the map.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Admin** (`/admin`) — dashboard of clients who are low on gas; client list and detail; Google Map of all clients colored by gas status; requests (accept → schedule → delivered); record deliveries; compose reminders; **SMS outbox** (one-tap "Open SMS app" prefilled with the number and message, then "Mark sent") — SMS stays manual from the PGI phone, as requested.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## First-time setup
 
-## Learn More
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Connect to the Convex deployment (one time, opens the browser to log in):
+   ```bash
+   npx convex dev
+   ```
+   This links the project to `https://elegant-giraffe-604.convex.cloud`, pushes the functions in `convex/`, fills `CONVEX_DEPLOYMENT` in `.env.local`, and regenerates `convex/_generated/`. Keep it running while developing.
+3. In another terminal, start Next.js:
+   ```bash
+   npm run dev
+   ```
+4. Open `http://localhost:3000/setup` and create the first **admin** account (works only once).
+5. Clients can register at `/register`, or the admin can add them at `/admin/clients/new`.
 
-To learn more about Next.js, take a look at the following resources:
+## Environment (`.env.local`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_CONVEX_URL` | Convex cloud URL (already set). |
+| `CONVEX_DEPLOYMENT` | Filled by `npx convex dev`. |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Optional. Enables the interactive Google Maps (click-to-pin, all-clients map). Without it, the app still works: pins via "Use my current location" / pasted coordinates, Google Maps embeds and links. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## How the gas estimate works
 
-## Deploy on Vercel
+`lib/gas.ts` — remaining gas = 1 − (days since last delivery ÷ usual days per tank). Default 30 days for 11 kg, 14 days for 2.7 kg; the admin can tune "usual days per tank" per client. Status: Good → Getting low (≤40 %) → Almost empty (≤20 %) → Likely empty (≤5 %).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project layout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/page.tsx` + `components/landing/*` — landing page
+- `app/(auth)/*` — login, register, setup (server actions in `app/actions/auth.ts`)
+- `app/(app)/portal/*` — client portal; `app/(app)/admin/*` — admin
+- `components/shell/AppShell.tsx` — sidebar/topbar shell with live badges
+- `convex/schema.ts` — tables: users, sessions, deliveries, requests, messages, notifications
+- `convex/auth.ts` — Node action: password hashing (scrypt) and session tokens; `proxy.ts` guards routes by cookie
